@@ -34,15 +34,20 @@ class MappingTests(unittest.TestCase):
 
     def test_input_names_match_contract(self):
         def names(cls):
-            return list(cls.INPUT_TYPES()["required"])
+            types = cls.INPUT_TYPES()
+            return list(types["required"]) + list(types.get("optional", {}))
         self.assertEqual(names(SimpleUILoraStack), ["model", "clip", "loras"])
         self.assertEqual(names(SimpleUIChainOutput), ["image", "name"])
         self.assertEqual(names(SimpleUIChainOutputText), ["text", "name"])
         self.assertEqual(names(SimpleUIChainInputImage), ["image", "name"])
         self.assertEqual(names(SimpleUIChainInputText), ["text", "name"])
 
+    def test_loras_is_an_optional_socket_without_widget(self):
+        types = SimpleUILoraStack.INPUT_TYPES()
+        self.assertNotIn("loras", types["required"])
+        self.assertEqual(types["optional"]["loras"], ("STRING", {"forceInput": True}))
+
     def test_defaults(self):
-        self.assertEqual(SimpleUILoraStack.INPUT_TYPES()["required"]["loras"][1]["default"], '{"schema":1,"loras":[]}')
         for cls in (SimpleUIChainOutput, SimpleUIChainOutputText, SimpleUIChainInputImage, SimpleUIChainInputText):
             self.assertEqual(cls.INPUT_TYPES()["required"]["name"][1]["default"], "")
 
@@ -72,6 +77,16 @@ class LoraStackTests(unittest.TestCase):
             self.assertIs(out[0], model)
             self.assertIs(out[1], clip)
             self.assertEqual(out[2], "")
+        self.assertEqual(comfy_stubs.calls, [])
+
+    def test_absent_or_blank_payload_passes_through(self):
+        model, clip = object(), object()
+        for kwargs in ({}, {"loras": None}, {"loras": ""}, {"loras": "  \n"}):
+            out = self.node.apply(model, clip, **kwargs)
+            self.assertIs(out[0], model)
+            self.assertIs(out[1], clip)
+            self.assertEqual(out[2], "")
+            self.assertIs(SimpleUILoraStack.VALIDATE_INPUTS(**kwargs), True)
         self.assertEqual(comfy_stubs.calls, [])
 
     def test_unknown_lora_raises_naming_file(self):

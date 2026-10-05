@@ -3,13 +3,16 @@ import comfy.utils
 import folder_paths
 
 from .lora_payload import (
-    DEFAULT_PAYLOAD,
     LoraPayloadError,
     enabled_entries,
     join_trigger_words,
     parse_payload,
     resolve_names,
 )
+
+
+def _is_empty(loras):
+    return loras is None or (isinstance(loras, str) and not loras.strip())
 
 
 class SimpleUILoraStack:
@@ -32,14 +35,18 @@ class SimpleUILoraStack:
             "required": {
                 "model": ("MODEL",),
                 "clip": ("CLIP",),
-                "loras": ("STRING", {"multiline": True, "default": DEFAULT_PAYLOAD}),
-            }
+            },
+            # Socket only, no widget: SimpleUI injects the payload into the API
+            # JSON at submission, or a text node can be wired in on the canvas.
+            "optional": {
+                "loras": ("STRING", {"forceInput": True}),
+            },
         }
 
     @classmethod
     def VALIDATE_INPUTS(cls, loras=None):
-        # A linked (non-widget) value is not known yet; apply() validates it.
-        if loras is None:
+        # Absent, empty, or linked (not known yet; apply() validates it).
+        if _is_empty(loras):
             return True
         try:
             entries = parse_payload(loras)
@@ -48,7 +55,9 @@ class SimpleUILoraStack:
             return f"LoRA Stack: {e}"
         return True
 
-    def apply(self, model, clip, loras):
+    def apply(self, model, clip, loras=None):
+        if _is_empty(loras):
+            return (model, clip, "")
         try:
             entries = parse_payload(loras)
             active = enabled_entries(entries)
