@@ -119,6 +119,28 @@ r_cached = run(graph(stack_json(lora_entry(A, 0, 0)), "lora_zero"))
 cached = [m[1]["nodes"] for m in r_cached["status"]["messages"] if m[0] == "execution_cached"]
 record("identical stack rerun served from ComfyUI cache", bool(cached) and "2" in cached[0], str(cached))
 
+# --- loras is an optional socket: absent, injected literal, or wired -----------
+g_absent = graph("", "lora_absent")
+del g_absent["2"]["inputs"]["loras"]
+r_absent = run(g_absent)
+record("loras absent: model/clip pass through (same image as empty stack)",
+       np.array_equal(images(r_absent, "8")[0], img_none) and r_absent["outputs"]["9"]["text"][0] == "")
+
+g_wired = graph(["20", 0], "lora_wired")
+g_wired["20"] = {"class_type": "SimpleUIChainInputText",
+                 "inputs": {"text": stack_json(lora_entry(A, tw="alpha style, shared"), lora_entry(B, enabled=False, tw="beta")), "name": ""}}
+r_wired = run(g_wired)
+record("loras wired from a text node == injected literal",
+       np.array_equal(images(r_wired, "8")[0], img_ab_off), r_wired["outputs"]["9"]["text"][0])
+
+g_wired_bad = graph(["20", 0], "never")
+g_wired_bad["20"] = {"class_type": "SimpleUIChainInputText", "inputs": {"text": stack_json(lora_entry("missing/nope.safetensors")), "name": ""}}
+try:
+    run(g_wired_bad)
+    record("wired invalid payload fails at execution", False)
+except RuntimeError as e:
+    record("wired invalid payload fails at execution", "LoRA file not found: 'missing/nope.safetensors'" in str(e))
+
 # --- Validation errors --------------------------------------------------------
 for label, payload, fragment in [
     ("unknown LoRA name", stack_json(lora_entry("missing/nope.safetensors")), "LoRA file not found: 'missing/nope.safetensors'"),
