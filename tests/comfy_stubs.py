@@ -69,13 +69,15 @@ def _install():
 
     nodes.LoadImage = LoadImage
 
-    sys.modules.update({
-        "folder_paths": folder_paths,
-        "comfy": comfy,
-        "comfy.sd": comfy_sd,
-        "comfy.utils": comfy_utils,
-        "nodes": nodes,
-    })
+    sys.modules.update(
+        {
+            "folder_paths": folder_paths,
+            "comfy": comfy,
+            "comfy.sd": comfy_sd,
+            "comfy.utils": comfy_utils,
+            "nodes": nodes,
+        }
+    )
 
 
 _install()

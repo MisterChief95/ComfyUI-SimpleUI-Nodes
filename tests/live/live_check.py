@@ -6,6 +6,7 @@ environment variables, then run with ComfyUI's Python (needs numpy, Pillow):
     COMFY_DIR=/path/to/ComfyUI CKPT=model.safetensors LORA_A=a.safetensors \
     LORA_B=b.safetensors python tests/live/live_check.py
 """
+
 import json
 import os
 import shutil
@@ -32,8 +33,9 @@ def record(name, ok, detail=""):
 
 
 def post(prompt):
-    req = urllib.request.Request(URL + "/prompt", data=json.dumps({"prompt": prompt}).encode(),
-                                 headers={"Content-Type": "application/json"})
+    req = urllib.request.Request(
+        URL + "/prompt", data=json.dumps({"prompt": prompt}).encode(), headers={"Content-Type": "application/json"}
+    )
     try:
         with urllib.request.urlopen(req) as r:
             return 200, json.load(r)
@@ -58,13 +60,21 @@ def run(prompt):
 
 
 def images(entry, node):
-    return [np.asarray(Image.open(f"{OUT}/{i.get('subfolder') and i['subfolder'] + '/'}{i['filename']}"))
-            for i in entry["outputs"][node]["images"]]
+    return [
+        np.asarray(Image.open(f"{OUT}/{i.get('subfolder') and i['subfolder'] + '/'}{i['filename']}"))
+        for i in entry["outputs"][node]["images"]
+    ]
 
 
 def lora_entry(name, sm=1.0, sc=1.0, enabled=True, tw=""):
-    return {"name": name, "strength_model": sm, "strength_clip": sc, "enabled": enabled, "trigger_words": tw,
-            "app_only_field": {"kept": True}}
+    return {
+        "name": name,
+        "strength_model": sm,
+        "strength_clip": sc,
+        "enabled": enabled,
+        "trigger_words": tw,
+        "app_only_field": {"kept": True},
+    }
 
 
 def stack_json(*entries):
@@ -78,9 +88,21 @@ def graph(loras, prefix, seed=42):
         "3": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["2", 1], "text": "a cat"}},
         "4": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["2", 1], "text": ""}},
         "5": {"class_type": "EmptyLatentImage", "inputs": {"width": 128, "height": 128, "batch_size": 1}},
-        "6": {"class_type": "KSampler", "inputs": {"model": ["2", 0], "seed": seed, "steps": 2, "cfg": 7.0,
-              "sampler_name": "euler", "scheduler": "normal", "positive": ["3", 0], "negative": ["4", 0],
-              "latent_image": ["5", 0], "denoise": 1.0}},
+        "6": {
+            "class_type": "KSampler",
+            "inputs": {
+                "model": ["2", 0],
+                "seed": seed,
+                "steps": 2,
+                "cfg": 7.0,
+                "sampler_name": "euler",
+                "scheduler": "normal",
+                "positive": ["3", 0],
+                "negative": ["4", 0],
+                "latent_image": ["5", 0],
+                "denoise": 1.0,
+            },
+        },
         "7": {"class_type": "VAEDecode", "inputs": {"samples": ["6", 0], "vae": ["1", 2]}},
         "8": {"class_type": "SaveImage", "inputs": {"images": ["7", 0], "filename_prefix": prefix}},
         "9": {"class_type": "PreviewAny", "inputs": {"source": ["2", 2]}},
@@ -91,7 +113,9 @@ def graph(loras, prefix, seed=42):
 r_none = run(graph('{"schema":1,"loras":[]}', "lora_none"))
 img_none = images(r_none, "8")[0]
 
-r_ab_off = run(graph(stack_json(lora_entry(A, tw="alpha style, shared"), lora_entry(B, enabled=False, tw="beta")), "lora_a_boff"))
+r_ab_off = run(
+    graph(stack_json(lora_entry(A, tw="alpha style, shared"), lora_entry(B, enabled=False, tw="beta")), "lora_a_boff")
+)
 img_ab_off = images(r_ab_off, "8")[0]
 trig = r_ab_off["outputs"]["9"]["text"][0]
 record("two LoRAs, second disabled: image generated", img_ab_off.shape == (128, 128, 3), str(img_ab_off.shape))
@@ -104,15 +128,21 @@ record("disabled entry == entry absent (bit-identical image)", np.array_equal(im
 r_ab = run(graph(stack_json(lora_entry(A, tw="alpha style, shared"), lora_entry(B, tw="shared, beta")), "lora_a_b"))
 img_ab = images(r_ab, "8")[0]
 record("enabling the second LoRA changes the image", not np.array_equal(img_ab, img_ab_off))
-record("trigger_words dedupe across entries", r_ab["outputs"]["9"]["text"][0] == "alpha style, shared, beta",
-       repr(r_ab["outputs"]["9"]["text"][0]))
+record(
+    "trigger_words dedupe across entries",
+    r_ab["outputs"]["9"]["text"][0] == "alpha style, shared, beta",
+    repr(r_ab["outputs"]["9"]["text"][0]),
+)
 
 r_ba = run(graph(stack_json(lora_entry(B, 0.8, 0.3), lora_entry(A, 0.5, 1.2)), "lora_order"))
 record("non-trivial strengths run", images(r_ba, "8")[0].shape == (128, 128, 3))
 
 r_zero = run(graph(stack_json(lora_entry(A, 0, 0)), "lora_zero"))
-record("enabled entry with both strengths 0 runs (applied as written)", True,
-       "image equal to empty stack: %s" % np.array_equal(images(r_zero, "8")[0], img_none))
+record(
+    "enabled entry with both strengths 0 runs (applied as written)",
+    True,
+    f"image equal to empty stack: {np.array_equal(images(r_zero, '8')[0], img_none)}",
+)
 
 # Back-to-back identical prompt: ComfyUI's output cache should skip every node.
 r_cached = run(graph(stack_json(lora_entry(A, 0, 0)), "lora_zero"))
@@ -123,18 +153,31 @@ record("identical stack rerun served from ComfyUI cache", bool(cached) and "2" i
 g_absent = graph("", "lora_absent")
 del g_absent["2"]["inputs"]["loras"]
 r_absent = run(g_absent)
-record("loras absent: model/clip pass through (same image as empty stack)",
-       np.array_equal(images(r_absent, "8")[0], img_none) and r_absent["outputs"]["9"]["text"][0] == "")
+record(
+    "loras absent: model/clip pass through (same image as empty stack)",
+    np.array_equal(images(r_absent, "8")[0], img_none) and r_absent["outputs"]["9"]["text"][0] == "",
+)
 
 g_wired = graph(["20", 0], "lora_wired")
-g_wired["20"] = {"class_type": "SimpleUIChainInputText",
-                 "inputs": {"text": stack_json(lora_entry(A, tw="alpha style, shared"), lora_entry(B, enabled=False, tw="beta")), "name": ""}}
+g_wired["20"] = {
+    "class_type": "SimpleUIChainInputText",
+    "inputs": {
+        "text": stack_json(lora_entry(A, tw="alpha style, shared"), lora_entry(B, enabled=False, tw="beta")),
+        "name": "",
+    },
+}
 r_wired = run(g_wired)
-record("loras wired from a text node == injected literal",
-       np.array_equal(images(r_wired, "8")[0], img_ab_off), r_wired["outputs"]["9"]["text"][0])
+record(
+    "loras wired from a text node == injected literal",
+    np.array_equal(images(r_wired, "8")[0], img_ab_off),
+    r_wired["outputs"]["9"]["text"][0],
+)
 
 g_wired_bad = graph(["20", 0], "never")
-g_wired_bad["20"] = {"class_type": "SimpleUIChainInputText", "inputs": {"text": stack_json(lora_entry("missing/nope.safetensors")), "name": ""}}
+g_wired_bad["20"] = {
+    "class_type": "SimpleUIChainInputText",
+    "inputs": {"text": stack_json(lora_entry("missing/nope.safetensors")), "name": ""},
+}
 try:
     run(g_wired_bad)
     record("wired invalid payload fails at execution", False)
@@ -143,7 +186,11 @@ except RuntimeError as e:
 
 # --- Validation errors --------------------------------------------------------
 for label, payload, fragment in [
-    ("unknown LoRA name", stack_json(lora_entry("missing/nope.safetensors")), "LoRA file not found: 'missing/nope.safetensors'"),
+    (
+        "unknown LoRA name",
+        stack_json(lora_entry("missing/nope.safetensors")),
+        "LoRA file not found: 'missing/nope.safetensors'",
+    ),
     ("malformed JSON", '{"schema":1,"loras":[', "not valid JSON"),
     ("future schema", '{"schema":2,"loras":[]}', "schema 2"),
     ("non-numeric strength", stack_json(lora_entry(A, sm="1")), "strength_model must be a number"),
@@ -151,10 +198,15 @@ for label, payload, fragment in [
 ]:
     code, body = post(graph(payload, "never"))
     details = json.dumps(body.get("node_errors", {}))
-    record(f"rejected at validation: {label}", code == 400 and fragment in details and COMFY_DIR not in details,
-           f"HTTP {code}: " + body.get("node_errors", {}).get("2", {}).get("errors", [{}])[0].get("details", ""))
+    record(
+        f"rejected at validation: {label}",
+        code == 400 and fragment in details and COMFY_DIR not in details,
+        f"HTTP {code}: " + body.get("node_errors", {}).get("2", {}).get("errors", [{}])[0].get("details", ""),
+    )
 
-r_dis_missing = run(graph(stack_json(lora_entry(A), lora_entry("missing/nope.safetensors", enabled=False)), "lora_dis_missing"))
+r_dis_missing = run(
+    graph(stack_json(lora_entry(A), lora_entry("missing/nope.safetensors", enabled=False)), "lora_dis_missing")
+)
 record("disabled entry naming a missing file is accepted", True)
 
 # --- Chain Output -> SaveImage --------------------------------------------------
@@ -180,10 +232,17 @@ p = {
 }
 r_in = run(p)
 record("Chain Input (Image) loads the staged file unchanged", np.array_equal(images(r_in, "3")[0], via))
-record("Chain Input/Output (Text) pass text through verbatim",
-       r_in["outputs"]["6"]["text"][0] == "a prompt, with commas\nand lines", repr(r_in["outputs"]["6"]["text"][0]))
-code, body = post({"1": p["1"] | {"inputs": {"image": "does_not_exist.png", "name": ""}},
-                   "3": {"class_type": "SaveImage", "inputs": {"images": ["1", 0], "filename_prefix": "x"}}})
+record(
+    "Chain Input/Output (Text) pass text through verbatim",
+    r_in["outputs"]["6"]["text"][0] == "a prompt, with commas\nand lines",
+    repr(r_in["outputs"]["6"]["text"][0]),
+)
+code, body = post(
+    {
+        "1": p["1"] | {"inputs": {"image": "does_not_exist.png", "name": ""}},
+        "3": {"class_type": "SaveImage", "inputs": {"images": ["1", 0], "filename_prefix": "x"}},
+    }
+)
 record("Chain Input (Image) rejects a missing file at validation", code == 400, f"HTTP {code}")
 
-print("\n%d/%d passed" % (sum(ok for _, ok, _ in results), len(results)))
+print(f"\n{sum(ok for _, ok, _ in results)}/{len(results)} passed")

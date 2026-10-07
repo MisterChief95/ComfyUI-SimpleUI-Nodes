@@ -1,6 +1,7 @@
-import tomllib
 import unittest
 from pathlib import Path
+
+import tomllib
 
 from simpleui_nodes.version import PACK_NAME, PACK_VERSION
 
