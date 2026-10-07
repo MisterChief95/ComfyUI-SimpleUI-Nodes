@@ -60,7 +60,7 @@ LoRA application uses ComfyUI's own `comfy.utils.load_torch_file` and `comfy.sd.
 ### Chain Output (Image) / Chain Output (Text)
 
 `SimpleUIChainOutput`: `image` IMAGE, `name` STRING (default `""`) → `IMAGE`.
-`SimpleUIChainOutputText`: `text` STRING (socket), `name` STRING (default `""`) → `STRING`.
+`SimpleUIChainOutputText`: optional `text` STRING (multiline, default `""`, still connectable as a socket), `name` STRING (default `""`) → `STRING`. Type the text directly or wire it from another node; unconnected and empty passes `""`.
 
 Pure passthroughs that mark "this is the stage result for the next stage". They are not output nodes and save nothing; wire the image into a normal `SaveImage` or `PreviewImage`. `name` is the reference other workflows use. An empty name means unnamed.
 

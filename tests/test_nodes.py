@@ -38,7 +38,7 @@ class MappingTests(unittest.TestCase):
             return list(types["required"]) + list(types.get("optional", {}))
         self.assertEqual(names(SimpleUILoraStack), ["model", "clip", "loras"])
         self.assertEqual(names(SimpleUIChainOutput), ["image", "name"])
-        self.assertEqual(names(SimpleUIChainOutputText), ["text", "name"])
+        self.assertEqual(names(SimpleUIChainOutputText), ["name", "text"])
         self.assertEqual(names(SimpleUIChainInputImage), ["image", "name"])
         self.assertEqual(names(SimpleUIChainInputText), ["text", "name"])
 
@@ -132,7 +132,13 @@ class ChainTests(unittest.TestCase):
         self.assertIs(SimpleUIChainOutput().passthrough(image, "stage1")[0], image)
 
     def test_output_text_is_identity(self):
-        self.assertEqual(SimpleUIChainOutputText().passthrough("a prompt", ""), ("a prompt",))
+        self.assertEqual(SimpleUIChainOutputText().passthrough("", text="a prompt"), ("a prompt",))
+
+    def test_text_output_text_is_optional_multiline_with_empty_default(self):
+        types = SimpleUIChainOutputText.INPUT_TYPES()
+        self.assertNotIn("text", types["required"])
+        self.assertEqual(types["optional"]["text"], ("STRING", {"multiline": True, "default": ""}))
+        self.assertEqual(SimpleUIChainOutputText().passthrough("stage"), ("",))
 
     def test_input_text_returns_widget_value(self):
         self.assertEqual(SimpleUIChainInputText().passthrough("hello", "x"), ("hello",))
