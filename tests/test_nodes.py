@@ -1,8 +1,6 @@
 import json
 import unittest
 
-from tests import comfy_stubs
-
 from simpleui_nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 from simpleui_nodes.chain import (
     SimpleUIChainInputImage,
@@ -11,6 +9,7 @@ from simpleui_nodes.chain import (
     SimpleUIChainOutputText,
 )
 from simpleui_nodes.lora_stack import SimpleUILoraStack
+from tests import comfy_stubs
 
 
 def stack(*entries):
@@ -24,10 +23,16 @@ def entry(name, sm=1.0, sc=1.0, enabled=True, tw=""):
 class MappingTests(unittest.TestCase):
     def test_all_nodes_registered_with_prefix_and_category(self):
         self.assertEqual(set(NODE_CLASS_MAPPINGS), set(NODE_DISPLAY_NAME_MAPPINGS))
-        self.assertEqual(set(NODE_CLASS_MAPPINGS), {
-            "SimpleUILoraStack", "SimpleUIChainOutput", "SimpleUIChainOutputText",
-            "SimpleUIChainInputImage", "SimpleUIChainInputText",
-        })
+        self.assertEqual(
+            set(NODE_CLASS_MAPPINGS),
+            {
+                "SimpleUILoraStack",
+                "SimpleUIChainOutput",
+                "SimpleUIChainOutputText",
+                "SimpleUIChainInputImage",
+                "SimpleUIChainInputText",
+            },
+        )
         for cls in NODE_CLASS_MAPPINGS.values():
             self.assertEqual(cls.CATEGORY, "SimpleUI")
             self.assertFalse(getattr(cls, "OUTPUT_NODE", False))
@@ -36,9 +41,10 @@ class MappingTests(unittest.TestCase):
         def names(cls):
             types = cls.INPUT_TYPES()
             return list(types["required"]) + list(types.get("optional", {}))
+
         self.assertEqual(names(SimpleUILoraStack), ["model", "clip", "loras"])
         self.assertEqual(names(SimpleUIChainOutput), ["image", "name"])
-        self.assertEqual(names(SimpleUIChainOutputText), ["text", "name"])
+        self.assertEqual(names(SimpleUIChainOutputText), ["name", "text"])
         self.assertEqual(names(SimpleUIChainInputImage), ["image", "name"])
         self.assertEqual(names(SimpleUIChainInputText), ["text", "name"])
 
@@ -106,11 +112,14 @@ class LoraStackTests(unittest.TestCase):
         self.assertEqual(comfy_stubs.loads, ["/models/loras/bar.safetensors"])
         self.node.apply([], [], stack(entry("styles/foo.safetensors")))
         self.node.apply([], [], stack(entry("bar.safetensors")))
-        self.assertEqual(comfy_stubs.loads, [
-            "/models/loras/bar.safetensors",
-            "/models/loras/styles/foo.safetensors",
-            "/models/loras/bar.safetensors",
-        ])
+        self.assertEqual(
+            comfy_stubs.loads,
+            [
+                "/models/loras/bar.safetensors",
+                "/models/loras/styles/foo.safetensors",
+                "/models/loras/bar.safetensors",
+            ],
+        )
 
     def test_validate_inputs(self):
         self.assertIs(SimpleUILoraStack.VALIDATE_INPUTS(stack(entry("bar.safetensors"))), True)
@@ -132,7 +141,13 @@ class ChainTests(unittest.TestCase):
         self.assertIs(SimpleUIChainOutput().passthrough(image, "stage1")[0], image)
 
     def test_output_text_is_identity(self):
-        self.assertEqual(SimpleUIChainOutputText().passthrough("a prompt", ""), ("a prompt",))
+        self.assertEqual(SimpleUIChainOutputText().passthrough("", text="a prompt"), ("a prompt",))
+
+    def test_text_output_text_is_optional_multiline_with_empty_default(self):
+        types = SimpleUIChainOutputText.INPUT_TYPES()
+        self.assertNotIn("text", types["required"])
+        self.assertEqual(types["optional"]["text"], ("STRING", {"multiline": True, "default": ""}))
+        self.assertEqual(SimpleUIChainOutputText().passthrough("stage"), ("",))
 
     def test_input_text_returns_widget_value(self):
         self.assertEqual(SimpleUIChainInputText().passthrough("hello", "x"), ("hello",))

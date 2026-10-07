@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-simpleui-nodes"
 description = "Optional ComfyUI nodes for ComfyUI SimpleUI: an ordered LoRA stack and chain input/output markers."
-version = "2.0.0"
+version = "2.1.0"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
 dependencies = []
@@ -14,3 +14,19 @@ PublisherId = ""
 DisplayName = "SimpleUI Nodes"
 Icon = ""
 includes = []
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+# Long DESCRIPTION/tooltip strings are intentional; the formatter handles code.
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["simpleui_nodes", "tests"]
+
+[tool.ruff.lint.per-file-ignores]
+# Re-exports consumed by ComfyUI and the SimpleUI app.
+"simpleui_nodes/__init__.py" = ["F401"]

@@ -26,15 +26,18 @@ class SimpleUIChainOutput:
 
 class SimpleUIChainOutputText:
     CATEGORY = "SimpleUI"
-    DESCRIPTION = "Marks this text as the stage result for the next SimpleUI stage. Passes the text through unchanged."
+    DESCRIPTION = "Marks this text as the stage result for the next SimpleUI stage. Passes the text through unchanged. Type the text here or connect it from another node; an unconnected, empty text passes an empty string."
     RETURN_TYPES = ("STRING",)
     FUNCTION = "passthrough"
 
     @classmethod
     def INPUT_TYPES(cls):
-        return {"required": {"text": ("STRING", {"forceInput": True}), "name": NAME_INPUT}}
+        return {
+            "required": {"name": NAME_INPUT},
+            "optional": {"text": ("STRING", {"multiline": True, "default": ""})},
+        }
 
-    def passthrough(self, text, name):
+    def passthrough(self, name, text=""):
         return (text,)
 
 

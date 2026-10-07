@@ -54,7 +54,9 @@ class ParsePayloadTests(unittest.TestCase):
         self.assertPayloadError('{"schema": 1, "loras": [', "not valid JSON")
 
     def test_nan_rejected(self):
-        self.assertPayloadError('{"schema":1,"loras":[{"name":"a","strength_model":NaN,"strength_clip":1,"enabled":true}]}', "NaN")
+        self.assertPayloadError(
+            '{"schema":1,"loras":[{"name":"a","strength_model":NaN,"strength_clip":1,"enabled":true}]}', "NaN"
+        )
 
     def test_not_an_object(self):
         self.assertPayloadError("[]", "JSON object")
@@ -123,19 +125,23 @@ class ResolveNamesTests(unittest.TestCase):
 
 class TriggerWordTests(unittest.TestCase):
     def test_joins_enabled_entries_only(self):
-        entries = parse_payload(payload(
-            entry(trigger_words="foo style, bar"),
-            entry(trigger_words="hidden", enabled=False),
-            entry(trigger_words="baz"),
-        ))
+        entries = parse_payload(
+            payload(
+                entry(trigger_words="foo style, bar"),
+                entry(trigger_words="hidden", enabled=False),
+                entry(trigger_words="baz"),
+            )
+        )
         self.assertEqual(join_trigger_words(entries), "foo style, bar, baz")
 
     def test_trims_drops_empty_and_dedupes_keeping_first(self):
-        entries = parse_payload(payload(
-            entry(trigger_words="  bar ,, foo "),
-            entry(trigger_words=""),
-            entry(trigger_words="foo, qux, bar"),
-        ))
+        entries = parse_payload(
+            payload(
+                entry(trigger_words="  bar ,, foo "),
+                entry(trigger_words=""),
+                entry(trigger_words="foo, qux, bar"),
+            )
+        )
         self.assertEqual(join_trigger_words(entries), "bar, foo, qux")
 
     def test_dedupe_is_case_sensitive(self):

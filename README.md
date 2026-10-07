@@ -2,7 +2,7 @@
 
 Optional ComfyUI custom nodes that complement [ComfyUI SimpleUI](https://github.com/MisterChief95/ComfyUI-SimpleUI). Add them to a workflow in the ComfyUI canvas, export the workflow as API JSON, and SimpleUI renders richer controls for them. Every node also works in plain ComfyUI without SimpleUI.
 
-- Pack: `comfyui-simpleui-nodes`, version `2.0.0` (`PACK_VERSION`)
+- Pack: `comfyui-simpleui-nodes`, version `2.1.0` (`PACK_VERSION`)
 - Contract: `2` (the node names, input names, and payload shape below). Contract 2 changed `loras` on LoRA Stack from a required text widget to an optional socket-only input; see the changelog below.
 - Category: `SimpleUI`. Every class type starts with `SimpleUI`.
 - No dependencies beyond ComfyUI. No front-end JavaScript.
@@ -60,7 +60,7 @@ LoRA application uses ComfyUI's own `comfy.utils.load_torch_file` and `comfy.sd.
 ### Chain Output (Image) / Chain Output (Text)
 
 `SimpleUIChainOutput`: `image` IMAGE, `name` STRING (default `""`) → `IMAGE`.
-`SimpleUIChainOutputText`: `text` STRING (socket), `name` STRING (default `""`) → `STRING`.
+`SimpleUIChainOutputText`: optional `text` STRING (multiline, default `""`, still connectable as a socket), `name` STRING (default `""`) → `STRING`. Type the text directly or wire it from another node; unconnected and empty passes `""`.
 
 Pure passthroughs that mark "this is the stage result for the next stage". They are not output nodes and save nothing; wire the image into a normal `SaveImage` or `PreviewImage`. `name` is the reference other workflows use. An empty name means unnamed.
 
@@ -81,7 +81,7 @@ Standalone they use their own widget value. SimpleUI overwrites `image` (with a 
 ## Detection route
 
 ```
-GET /simpleui/pack  ->  {"pack": "comfyui-simpleui-nodes", "version": "2.0.0", "contract": 2}
+GET /simpleui/pack  ->  {"pack": "comfyui-simpleui-nodes", "version": "2.1.0", "contract": 2}
 ```
 
 SimpleUI falls back to looking for `SimpleUI*` class types in `/object_info` when the route is missing.
@@ -127,6 +127,7 @@ Not yet verified: generation with a real SD1.5 or SDXL checkpoint and real LoRAs
 
 ## Changelog
 
+- **2.1.0 (contract 2):** Chain Output (Text)'s `text` is now an optional multiline STRING (default `""`, still connectable as a socket), so a prompt can be typed directly into the node. Connected behavior is unchanged.
 - **2.0.0 (contract 2):** LoRA Stack's `loras` is an optional, socket-only STRING input (`forceInput`), no longer a required multiline widget. Absent or blank `loras` passes through. The payload format is unchanged.
 - **1.0.0 (contract 1):** first release.
 
