@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-simpleui-nodes"
 description = "Optional ComfyUI nodes for ComfyUI SimpleUI: an ordered LoRA stack and chain input/output markers."
-version = "2.0.0"
+version = "2.1.0"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
 dependencies = []
